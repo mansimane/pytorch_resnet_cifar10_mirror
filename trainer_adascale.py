@@ -245,7 +245,8 @@ def main():
         if not done:
             if local_rank ==0:
                 print("Local Rank: {}, Epoch: {}, Training ...".format(local_rank, epoch))
-
+                if use_adascale:
+                    print("Last epoch: ", last_epoch)
 
             # Save and evaluate model routinely
             if epoch % eval_freq == 0:
@@ -258,6 +259,7 @@ def main():
                     print("-" * 75)
                     print("Epoch: {}, Accuracy: {}".format(epoch, accuracy))
                     print("-" * 75)
+
             # In distributed mode, calling the :meth:`set_epoch` method at
             #         the beginning of each epoch **before** creating the :class:`DataLoader` iterator
             #         is necessary to make shuffling work properly across multiple epochs. Otherwise,
@@ -301,13 +303,14 @@ def main():
                         last_epoch = epoch_scaled
                     if (not run_max_steps) and (epoch_scaled >= num_epochs):
                         done = True
+                        break
 
 
             # TODO: This loss is for last batch in one epoch. Calculate average across epoch.
             if get_rank() == 0:
                 learning_rate = optimizer.param_groups[0]['lr']
                 writer.add_scalar(f'Learning Rate', learning_rate, epoch)
-                writer.add_scalar(f'Train/Loss_epoch', losses.avg(), epoch)
+                writer.add_scalar(f'Train/Loss_epoch', losses.avg, epoch)
                 writer.add_scalar(f'Train/epoch_scaled', epoch_scaled, epoch)
                 writer.flush()
 
