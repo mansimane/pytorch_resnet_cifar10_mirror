@@ -173,7 +173,7 @@ def main():
         print(" Number of steps : ")
 
     # Encapsulate the model on the GPU assigned to the current process
-    model = torch.nn.DataParallel(resnet.__dict__[argv.arch]())
+    model = resnet.__dict__[argv.arch]()
 
     device = torch.device("cuda:{}".format(local_rank))
     model = model.to(device)
@@ -283,8 +283,8 @@ def main():
                     gain = optimizer.gain()
                     step_scale_dep += gain
                     writer.add_scalar(f'Gain', gain, step)
-                    writer.add_scalar(f'Train/Loss_step_scale_dep', losses, step_scale_dep)
-                    writer.add_scalar(f'Train/Loss_step', losses, step_scale_dep)
+                    writer.add_scalar(f'Train/Loss_step_scale_dep', losses.avg, step_scale_dep)
+                    writer.add_scalar(f'Train/Loss_step', losses.avg, step_scale_dep)
 
                 writer.flush()
 
