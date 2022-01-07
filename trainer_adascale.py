@@ -237,69 +237,80 @@ def main():
 
     done = False
     epoch = 0
+    last_epoch = 0
     for epoch in range(num_epochs):
-        if local_rank ==0:
-            print("Local Rank: {}, Epoch: {}, Training ...".format(local_rank, epoch))
+        if not done:
+            if local_rank ==0:
+                print("Local Rank: {}, Epoch: {}, Training ...".format(local_rank, epoch))
 
 
-        # Save and evaluate model routinely
-        if epoch % eval_freq == 0:
-            if local_rank == 0:
-                accuracy = evaluate(model=ddp_model, device=device, test_loader=test_loader)
+            # Save and evaluate model routinely
+            if epoch % eval_freq == 0:
+                if local_rank == 0:
+                    accuracy = evaluate(model=ddp_model, device=device, test_loader=test_loader)
+                    if get_rank() == 0:
+                        writer.add_scalar(f'Val/Acc', accuracy, epoch)
+                        writer.flush()
+                    torch.save(ddp_model.state_dict(), model_filepath)
+                    print("-" * 75)
+                    print("Epoch: {}, Accuracy: {}".format(epoch, accuracy))
+                    print("-" * 75)
+            # In distributed mode, calling the :meth:`set_epoch` method at
+            #         the beginning of each epoch **before** creating the :class:`DataLoader` iterator
+            #         is necessary to make shuffling work properly across multiple epochs. Otherwise,
+            #         the same ordering will be always used.
+
+            batch_time = AverageMeter()
+            data_time = AverageMeter()
+            losses = AverageMeter()
+            top1 = AverageMeter()
+
+            train_sampler.set_epoch(epoch)
+            # switch to train mode
+            ddp_model.train()
+
+            for i, data in enumerate(train_loader):
+                inputs, labels = data[0].to(device), data[1].to(device)
+                optimizer.zero_grad()
+
+                outputs = ddp_model(inputs)
+                loss = criterion(outputs, labels)
+
+                loss.backward()
+                losses.update(loss.item(), inputs.size(0))
+
                 if get_rank() == 0:
-                    writer.add_scalar(f'Val/Acc', accuracy, epoch)
-                    writer.flush()
-                torch.save(ddp_model.state_dict(), model_filepath)
-                print("-" * 75)
-                print("Epoch: {}, Accuracy: {}".format(epoch, accuracy))
-                print("-" * 75)
-        # In distributed mode, calling the :meth:`set_epoch` method at
-        #         the beginning of each epoch **before** creating the :class:`DataLoader` iterator
-        #         is necessary to make shuffling work properly across multiple epochs. Otherwise,
-        #         the same ordering will be always used.
-
-        batch_time = AverageMeter()
-        data_time = AverageMeter()
-        losses = AverageMeter()
-        top1 = AverageMeter()
-
-        train_sampler.set_epoch(epoch)
-        # switch to train mode
-        ddp_model.train()
-
-        for i, data in enumerate(train_loader):
-            inputs, labels = data[0].to(device), data[1].to(device)
-            optimizer.zero_grad()
-
-            outputs = ddp_model(inputs)
-            loss = criterion(outputs, labels)
-
-            loss.backward()
-            losses.update(loss.item(), inputs.size(0))
-
-            if get_rank() == 0:
-                writer.add_scalar(f'Train/Loss_step', loss.item(), step)
-                if use_adascale:
-                    gain = optimizer.gain()
-                    step_scale_dep += gain
-                    writer.add_scalar(f'Gain', gain, step)
-                    writer.add_scalar(f'Train/Loss_step_scale_dep', losses.avg, step_scale_dep)
                     writer.add_scalar(f'Train/Loss_step', losses.avg, step_scale_dep)
+                    if use_adascale:
+                        gain = optimizer.gain()
+                        step_scale_dep += gain
+                        writer.add_scalar(f'Gain', gain, step)
+                        writer.add_scalar(f'Train/Loss_step_scale_dep', losses.avg, step_scale_dep)
 
+                    writer.flush()
+
+                optimizer.step()
+                step += 1
+                if use_adascale:
+                    epoch_scaled = step_scale_dep // len(train_loader)
+                    if epoch_scaled > last_epoch:
+                        lr_scheduler.step()
+                        last_epoch = epoch_scaled
+                    if epoch_scaled >= num_epochs:
+                        done = True
+
+
+            # TODO: This loss is for last batch in one epoch. Calculate average across epoch.
+            if get_rank() == 0:
+                learning_rate = optimizer.param_groups[0]['lr']
+                writer.add_scalar(f'Learning Rate', learning_rate, epoch)
+                writer.add_scalar(f'Train/Loss_epoch', losses.avg(), epoch)
+                writer.add_scalar(f'Train/epoch_scaled', epoch_scaled, epoch)
                 writer.flush()
 
-            optimizer.step()
-            step += 1
-
-
-        # TODO: This loss is for last batch in one epoch. Calculate average across epoch.
-        if get_rank() == 0:
-            learning_rate = optimizer.param_groups[0]['lr']
-            writer.add_scalar(f'Learning Rate', learning_rate, epoch)
-            writer.add_scalar(f'Train/Loss_epoch', loss.item(), epoch)
-            writer.flush()
-
-        lr_scheduler.step()
+            # Take lr step after every epoch if adascale is not enabled.
+            if not use_adascale:
+                lr_scheduler.step()
     print(" INFO: Total steps: ", step)
     print(" INFO: Total step_scale_dep: ", step_scale_dep)
 
