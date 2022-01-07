@@ -118,11 +118,13 @@ def main():
     parser.add_argument("--model_filename", type=str, help="Model filename.", default=model_filename_default)
     parser.add_argument("--resume", action="store_true", help="Resume training from saved checkpoint.")
     parser.add_argument("--use_adascale", action="store_true", help="Use adascale optimizer for training.")
+    parser.add_argument("--scale_lr_schedule", action="store_true", help="Scale learnining rate schedule based on adascale gain steps",default=False)
     parser.add_argument("--adascale_scale", type=int, help="Scale factor for adascale.", default=adascale_scale_default)
 
     parser.add_argument("--use_fp16_compress", action="store_true", help="Use fp16 compression for training.")
     parser.add_argument("--run_max_steps", action="store_true", help="Run adascale for number of steps equal to base \
      schedule irrespetive of number of steps", default=True)
+    parser.add_argument("--skip_gain_calc_steps", type=int, help="Number of steps for which gain calculation is calculated", default=1)
     parser.add_argument('--log_dir',
                         default='./logs',
                         type=str,
@@ -144,6 +146,7 @@ def main():
     momentum = argv.momentum
     eval_freq = argv.eval_freq
     run_max_steps = argv.run_max_steps
+    scale_lr_schedule = argv.scale_lr_schedule
     # Create directories outside the PyTorch program
     # Do not create directory here because it is not multiprocess safe
     '''
@@ -165,7 +168,7 @@ def main():
 
     if get_rank() == 0:
         # tensorboard summary writer (by default created for all workers)
-        tensorboard_path = f'{argv.log_dir}/worker-0-scale-{scale}-lr-{learning_rate}-bs-{batch_size}-scheduler--adascale-{use_adascale}-shuffle-run_max_steps-{run_max_steps}'
+        tensorboard_path = f'{argv.log_dir}/worker-0-scale-{scale}-lr-{learning_rate}-bs-{batch_size}-scheduler--adascale-{use_adascale}-shuffle-run_max_steps-{run_max_steps}-scale_lr_schedule-{scale_lr_schedule}'
 
         writer = SummaryWriter(tensorboard_path)
 
@@ -296,7 +299,7 @@ def main():
 
                 optimizer.step()
                 step += 1
-                if use_adascale:
+                if use_adascale and scale_lr_schedule:
                     epoch_scaled = step_scale_dep // len(train_loader)
                     if epoch_scaled > last_epoch:
                         lr_scheduler.step()
@@ -315,7 +318,7 @@ def main():
                 writer.flush()
 
             # Take lr step after every epoch if adascale is not enabled.
-            if not use_adascale:
+            if not use_adascale and not scale_lr_schedule:
                 lr_scheduler.step()
     print(" INFO: Total steps: ", step)
     print(" INFO: Total step_scale_dep: ", step_scale_dep)
