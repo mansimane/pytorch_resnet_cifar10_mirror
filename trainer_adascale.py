@@ -318,7 +318,7 @@ def main():
                 writer.flush()
 
             # Take lr step after every epoch if adascale is not enabled.
-            if not use_adascale and not scale_lr_schedule:
+            if (not use_adascale) or (not scale_lr_schedule):
                 lr_scheduler.step()
     print(" INFO: Total steps: ", step)
     print(" INFO: Total step_scale_dep: ", step_scale_dep)
