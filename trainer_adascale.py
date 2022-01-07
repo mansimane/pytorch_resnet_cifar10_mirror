@@ -121,6 +121,8 @@ def main():
     parser.add_argument("--adascale_scale", type=int, help="Scale factor for adascale.", default=adascale_scale_default)
 
     parser.add_argument("--use_fp16_compress", action="store_true", help="Use fp16 compression for training.")
+    parser.add_argument("--run_max_steps", action="store_true", help="Run adascale for number of steps equal to base \
+     schedule irrespetive of number of steps", default=True)
     parser.add_argument('--log_dir',
                         default='./logs',
                         type=str,
@@ -141,6 +143,7 @@ def main():
     weight_decay = argv.weight_decay
     momentum = argv.momentum
     eval_freq = argv.eval_freq
+    run_max_steps = argv.run_max_steps
     # Create directories outside the PyTorch program
     # Do not create directory here because it is not multiprocess safe
     '''
@@ -162,7 +165,7 @@ def main():
 
     if get_rank() == 0:
         # tensorboard summary writer (by default created for all workers)
-        tensorboard_path = f'{argv.log_dir}/worker-0-scale-{scale}-lr-{learning_rate}-bs-{batch_size}-scheduler--adascale-{use_adascale}-shuffle'
+        tensorboard_path = f'{argv.log_dir}/worker-0-scale-{scale}-lr-{learning_rate}-bs-{batch_size}-scheduler--adascale-{use_adascale}-shuffle-run_max_steps-{run_max_steps}'
 
         writer = SummaryWriter(tensorboard_path)
 
@@ -296,7 +299,7 @@ def main():
                     if epoch_scaled > last_epoch:
                         lr_scheduler.step()
                         last_epoch = epoch_scaled
-                    if epoch_scaled >= num_epochs:
+                    if (not run_max_steps) and (epoch_scaled >= num_epochs):
                         done = True
 
 
