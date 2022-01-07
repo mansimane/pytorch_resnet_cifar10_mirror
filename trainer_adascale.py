@@ -173,7 +173,7 @@ def main():
         print(" Number of steps : ")
 
     # Encapsulate the model on the GPU assigned to the current process
-    model = torch.nn.DataParallel(resnet.__dict__[args.arch]())
+    model = torch.nn.DataParallel(resnet.__dict__[argv.arch]())
 
     device = torch.device("cuda:{}".format(local_rank))
     model = model.to(device)
