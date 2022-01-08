@@ -314,7 +314,8 @@ def main():
                 learning_rate = optimizer.param_groups[0]['lr']
                 writer.add_scalar(f'Learning Rate', learning_rate, epoch)
                 writer.add_scalar(f'Train/Loss_epoch', losses.avg, epoch)
-                writer.add_scalar(f'Train/epoch_scaled', epoch_scaled, epoch)
+                if use_adascale and scale_lr_schedule:
+                    writer.add_scalar(f'Train/epoch_scaled', epoch_scaled, epoch)
                 writer.flush()
 
             # Take lr step after every epoch if adascale is not enabled.
