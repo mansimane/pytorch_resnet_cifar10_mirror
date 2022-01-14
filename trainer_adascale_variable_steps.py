@@ -296,7 +296,7 @@ def main():
                     writer.add_scalar(f'Gain', gain, step)
                     writer.add_scalar(f'Gain_step_scale_dep', gain, step_scale_dep)
                     writer.add_scalar(f'Train/Loss_step_scale_dep', losses.avg, step_scale_dep)
-                    print("Step: ", step,"step_scale_dep", step_scale_dep, "epoch_scaled: ", step_scale_dep // len(train_loader))
+                    # print("Step: ", step,"step_scale_dep", step_scale_dep, "epoch_scaled: ", step_scale_dep // len(train_loader))
                 writer.flush()
 
             optimizer.step()
@@ -326,16 +326,6 @@ def main():
     print(" INFO: Total step_scale_dep: ", step_scale_dep)
 
 
-    # Save and evaluate model at the end
-    if local_rank == 0:
-        accuracy = evaluate(model=ddp_model, device=device, test_loader=test_loader)
-        if get_rank() == 0:
-            writer.add_scalar(f'Val/Acc', accuracy, epoch)
-            writer.flush()
-        torch.save(ddp_model.state_dict(), model_filepath)
-        print("-" * 75)
-        print("Epoch: {}, Accuracy: {}".format(epoch, accuracy))
-        print("-" * 75)
 
 if __name__ == "__main__":
     main()
