@@ -286,12 +286,13 @@ def main():
 
             loss.backward()
             losses.update(loss.item(), inputs.size(0))
+            if use_adascale:
+                gain = optimizer.gain()
+                step_scale_dep += gain
 
             if get_rank() == 0:
                 writer.add_scalar(f'Train/Loss_step', losses.avg, step_scale_dep)
                 if use_adascale:
-                    gain = optimizer.gain()
-                    step_scale_dep += gain
                     writer.add_scalar(f'Gain', gain, step)
                     writer.add_scalar(f'Gain_step_scale_dep', gain, step_scale_dep)
                     writer.add_scalar(f'Train/Loss_step_scale_dep', losses.avg, step_scale_dep)
