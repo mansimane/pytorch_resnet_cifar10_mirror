@@ -168,7 +168,7 @@ def main():
 
     if get_rank() == 0:
         # tensorboard summary writer (by default created for all workers)
-        tensorboard_path = f'{argv.log_dir}/var-len-worker-0-scale-{scale}-lr-{learning_rate}-bs-{batch_size}-scheduler--adascale-{use_adascale}-shuffle-run_max_steps-{run_max_steps}-scale_lr_schedule-{scale_lr_schedule}'
+        tensorboard_path = f'{argv.log_dir}/var-len-run2-worker-0-scale-{scale}-lr-{learning_rate}-bs-{batch_size}-scheduler--adascale-{use_adascale}-shuffle-run_max_steps-{run_max_steps}-scale_lr_schedule-{scale_lr_schedule}'
 
         writer = SummaryWriter(tensorboard_path)
 
@@ -325,7 +325,16 @@ def main():
     print(" INFO: Total steps: ", step)
     print(" INFO: Total step_scale_dep: ", step_scale_dep)
 
-
+    # Perform validation at the end
+    if local_rank == 0:
+        accuracy = evaluate(model=ddp_model, device=device, test_loader=test_loader)
+        if get_rank() == 0:
+            writer.add_scalar(f'Val/Acc', accuracy, epoch)
+            writer.flush()
+        torch.save(ddp_model.state_dict(), model_filepath)
+        print("-" * 75)
+        print("Epoch: {}, Accuracy: {}".format(epoch, accuracy))
+        print("-" * 75)
 
 if __name__ == "__main__":
     main()
