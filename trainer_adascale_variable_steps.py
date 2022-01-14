@@ -244,6 +244,7 @@ def main():
     done = False
     epoch = 0
     last_epoch = 0
+    epoch_scaled = 0
     while not done:
         if local_rank == 0:
             print("Local Rank: {}, Epoch: {}, Training ...".format(local_rank, epoch))
@@ -275,7 +276,7 @@ def main():
         train_sampler.set_epoch(epoch)
         # switch to train mode
         ddp_model.train()
-
+        
         for i, data in enumerate(train_loader):
             inputs, labels = data[0].to(device), data[1].to(device)
             optimizer.zero_grad()
@@ -294,7 +295,7 @@ def main():
                     writer.add_scalar(f'Gain', gain, step)
                     writer.add_scalar(f'Gain_step_scale_dep', gain, step_scale_dep)
                     writer.add_scalar(f'Train/Loss_step_scale_dep', losses.avg, step_scale_dep)
-
+                    print("Step: ", step,"step_scale_dep", step_scale_dep, "epoch_scaled: " ,step_scale_dep // len(train_loader))
                 writer.flush()
 
             optimizer.step()
@@ -312,10 +313,10 @@ def main():
                             writer.add_scalar(f'Train/epoch_scaled', epoch_scaled, epoch)
                         writer.flush()
 
-                if (not run_max_steps) and (epoch_scaled >= num_epochs):
-                    done = True
-                    break
-
+            if int(epoch_scaled) >= num_epochs:
+                done = True
+                break
+                 
 
 
         # Take lr step after every epoch if adascale is not enabled.
