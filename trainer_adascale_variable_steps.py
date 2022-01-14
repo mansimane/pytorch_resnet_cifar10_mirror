@@ -251,6 +251,17 @@ def main():
             if use_adascale:
                 print("Last epoch: ", last_epoch)
 
+        # Save and evaluate model routinely
+        if epoch % eval_freq == 0:
+            if local_rank == 0:
+                accuracy = evaluate(model=ddp_model, device=device, test_loader=test_loader)
+                if get_rank() == 0:
+                    writer.add_scalar(f'Val/Acc', accuracy, epoch)
+                    writer.flush()
+                torch.save(ddp_model.state_dict(), model_filepath)
+                print("-" * 75)
+                print("Epoch: {}, Accuracy: {}".format(epoch, accuracy))
+                print("-" * 75)
 
         # In distributed mode, calling the :meth:`set_epoch` method at
         #         the beginning of each epoch **before** creating the :class:`DataLoader` iterator
@@ -297,23 +308,11 @@ def main():
                     last_epoch = epoch_scaled
                     if get_rank() == 0:
                         learning_rate = optimizer.param_groups[0]['lr']
-                        writer.add_scalar(f'Learning Rate', learning_rate, epoch_scaled)
+                        writer.add_scalar(f'Learning Rate', learning_rate, epoch)
                         writer.add_scalar(f'Train/Loss_epoch', losses.avg, epoch)
                         if use_adascale and scale_lr_schedule:
                             writer.add_scalar(f'Train/epoch_scaled', epoch_scaled, epoch)
                         writer.flush()
-
-                    # Save and evaluate model routinely
-                    if epoch_scaled % eval_freq == 0:
-                        if local_rank == 0:
-                            accuracy = evaluate(model=ddp_model, device=device, test_loader=test_loader)
-                            if get_rank() == 0:
-                                writer.add_scalar(f'Val/Acc', accuracy, epoch_scaled)
-                                writer.flush()
-                            torch.save(ddp_model.state_dict(), model_filepath)
-                            print("-" * 75)
-                            print("Epoch: {}, Accuracy: {}".format(epoch_scaled, accuracy))
-                            print("-" * 75)
 
             if int(epoch_scaled) >= num_epochs:
                 done = True
@@ -327,6 +326,16 @@ def main():
     print(" INFO: Total step_scale_dep: ", step_scale_dep)
 
 
+    # Save and evaluate model at the end
+    if local_rank == 0:
+        accuracy = evaluate(model=ddp_model, device=device, test_loader=test_loader)
+        if get_rank() == 0:
+            writer.add_scalar(f'Val/Acc', accuracy, epoch)
+            writer.flush()
+        torch.save(ddp_model.state_dict(), model_filepath)
+        print("-" * 75)
+        print("Epoch: {}, Accuracy: {}".format(epoch, accuracy))
+        print("-" * 75)
 
 if __name__ == "__main__":
     main()
