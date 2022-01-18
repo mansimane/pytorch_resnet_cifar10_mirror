@@ -169,7 +169,7 @@ def main():
     if get_rank() == 0:
         # tensorboard summary writer (by default created for all workers)
         tensorboard_path = f'{argv.log_dir}/worker-0-scale-{scale}-lr-{learning_rate}-bs-{batch_size}-scheduler--adascale-{use_adascale}-shuffle-run_max_steps-{run_max_steps}-scale_lr_schedule-{scale_lr_schedule}'
-
+        print("Log directory ", tensorboard_path )
         writer = SummaryWriter(tensorboard_path)
 
         print(" Adascale hyperparameters")
@@ -318,7 +318,7 @@ def main():
                 writer.flush()
 
             # Take lr step after every epoch if adascale is not enabled.
-            if (not use_adascale) or (not scale_lr_schedule):
+            if not scale_lr_schedule:
                 lr_scheduler.step()
     print(" INFO: Total steps: ", step)
     print(" INFO: Total step_scale_dep: ", step_scale_dep)
