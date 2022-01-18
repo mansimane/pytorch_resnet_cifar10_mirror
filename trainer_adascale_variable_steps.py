@@ -301,10 +301,11 @@ def main():
 
             optimizer.step()
             step += 1
-            if use_adascale and scale_lr_schedule:
+            if use_adascale  :
                 epoch_scaled = step_scale_dep // len(train_loader)
                 if epoch_scaled > last_epoch:
-                    lr_scheduler.step()
+                    if scale_lr_schedule:
+                        lr_scheduler.step()
                     last_epoch = epoch_scaled
                     if get_rank() == 0:
                         learning_rate = optimizer.param_groups[0]['lr']
@@ -319,14 +320,15 @@ def main():
                 break
 
         epoch += 1
-        # Take lr step after every epoch if adascale is not enabled.
-        if (not use_adascale) or (not scale_lr_schedule):
+        # Take lr step after every epoch if adascale is not enabled or want to scale based on scale independent epochs.
+        if not scale_lr_schedule:
             lr_scheduler.step()
     print(" INFO: Total steps: ", step)
     print(" INFO: Total step_scale_dep: ", step_scale_dep)
 
     # Perform validation at the end
     if local_rank == 0:
+        ddp_model.eval()
         accuracy = evaluate(model=ddp_model, device=device, test_loader=test_loader)
         if get_rank() == 0:
             writer.add_scalar(f'Val/Acc', accuracy, epoch)
