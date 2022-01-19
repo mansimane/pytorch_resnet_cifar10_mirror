@@ -326,6 +326,8 @@ def main():
     print(" INFO: Total steps: ", step)
     print(" INFO: Total step_scale_dep: ", step_scale_dep)
 
+    # Without this validation fails at the end
+    optimizer.zero_grad()
     # Perform validation at the end
     if local_rank == 0:
         ddp_model.eval()
