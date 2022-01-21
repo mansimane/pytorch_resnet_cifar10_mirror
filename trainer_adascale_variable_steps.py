@@ -168,7 +168,7 @@ def main():
 
     if get_rank() == 0:
         # tensorboard summary writer (by default created for all workers)
-        tensorboard_path = f'{argv.log_dir}/skip-step-var-len-run-val-fix-worker-0-scale-{scale}-lr-{learning_rate}-bs-{batch_size}-scheduler--adascale-{use_adascale}-shuffle-run_max_steps-{run_max_steps}-scale_lr_schedule-{scale_lr_schedule}'
+        tensorboard_path = f'{argv.log_dir}/skip-step-update-5-var-len-run-worker-0-scale-{scale}-lr-{learning_rate}-bs-{batch_size}-scheduler--adascale-{use_adascale}-shuffle-run_max_steps-{run_max_steps}-scale_lr_schedule-{scale_lr_schedule}-seed{random_seed}'
         print("Log directory ", tensorboard_path)
         writer = SummaryWriter(tensorboard_path)
 
