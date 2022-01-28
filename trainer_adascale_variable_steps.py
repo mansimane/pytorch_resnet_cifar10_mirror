@@ -147,6 +147,7 @@ def main():
     eval_freq = argv.eval_freq
     run_max_steps = argv.run_max_steps
     scale_lr_schedule = argv.scale_lr_schedule
+    skip_gain_calc_steps = argv.skip_gain_calc_steps
     # Create directories outside the PyTorch program
     # Do not create directory here because it is not multiprocess safe
     '''
@@ -168,7 +169,7 @@ def main():
 
     if get_rank() == 0:
         # tensorboard summary writer (by default created for all workers)
-        tensorboard_path = f'{argv.log_dir}/skip-step-update-5-var-len-run-worker-0-scale-{scale}-lr-{learning_rate}-bs-{batch_size}-scheduler--adascale-{use_adascale}-shuffle-run_max_steps-{run_max_steps}-scale_lr_schedule-{scale_lr_schedule}-seed{random_seed}'
+        tensorboard_path = f'{argv.log_dir}/skip-step-update-{skip_gain_calc_steps}-v2-var-len-run-worker-0-scale-{scale}-lr-{learning_rate}-bs-{batch_size}-scheduler--adascale-{use_adascale}-shuffle-run_max_steps-{run_max_steps}-scale_lr_schedule-{scale_lr_schedule}-seed{random_seed}'
         print("Log directory ", tensorboard_path)
         writer = SummaryWriter(tensorboard_path)
 
@@ -226,7 +227,8 @@ def main():
                                        lr=learning_rate,
                                        momentum=momentum,
                                        weight_decay=weight_decay),
-                             scale=scale)
+                             scale=scale,
+                             update_interval=skip_gain_calc_steps)
     else:
         print(" INFO: Not using Adascale")
         optimizer = optim.SGD(ddp_model.parameters(),
@@ -234,9 +236,17 @@ def main():
                               momentum=momentum,
                               weight_decay=weight_decay)
     step_times = []
-    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
-                                                        milestones=[100, 150], last_epoch=-1)
-
+    # Total T_SI, scale invariant steps during training should remain same
+    # If it takes T_SI steps and E epochs in base schedule,
+    #  - If we train of E epochs we would need T_SI/S steps in scaled training.
+    #  - Hence to maintain same T_SI steps, we need to write training loop for E*S epochs. This may end early if gain is consistently =S.
+    #  - We scale LR schedule steps by S, because we are scaling target epochs by S.
+    if scale_lr_schedule:
+        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
+                                                        milestones=[100*scale, 150*scale], last_epoch=-1)
+    else:
+        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
+                                                                        milestones=[100, 150], last_epoch=-1)
     # # Loop over the dataset multiple times
     step = 0
     step_scale_dep = 0
