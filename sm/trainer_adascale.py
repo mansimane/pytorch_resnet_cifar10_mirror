@@ -256,6 +256,7 @@ def main():
     epoch = 0
     last_epoch = 0
     epoch_scaled = 0
+    print("### optimizer ", optimizer._scale)
     while not done:
         if local_rank ==0:
             print("Local Rank: {}, Epoch: {}, Training ...".format(local_rank, epoch))
@@ -312,11 +313,11 @@ def main():
                 if epoch_scaled > last_epoch:
                     lr_scheduler.step()
                     last_epoch = epoch_scaled
-                if (not run_max_steps) and (epoch_scaled >= num_epochs):
+                if epoch_scaled >= num_epochs:
                     done = True
                     break
 
-
+        epoch += 1
         if get_rank() == 0:
             learning_rate = optimizer.param_groups[0]['lr']
             writer.add_scalar(f'Learning Rate', learning_rate, epoch)
