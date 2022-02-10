@@ -262,7 +262,6 @@ def main():
     epoch = 0
     last_epoch = 0
     epoch_scaled = 0
-    print("### optimizer ", optimizer._scale)
     while not done:
         if local_rank ==0:
             print("Local Rank: {}, Epoch: {}, Training ...".format(local_rank, epoch))
@@ -318,6 +317,7 @@ def main():
                 epoch_scaled = step_scale_dep // len(train_loader)
                 if epoch_scaled > last_epoch:
                     lr_scheduler.step()
+                    print("Taking scheduler step, epoch_scaled: ", epoch_scaled, "lr: ", optimizer.param_groups[0]['lr'])
                     last_epoch = epoch_scaled
                 if epoch_scaled >= num_epochs:
                     done = True
@@ -335,7 +335,7 @@ def main():
 
     print(" INFO: Total steps: ", step)
     print(" INFO: Total step_scale_dep: ", step_scale_dep)
-
+    exit()
 
 if __name__ == "__main__":
     main()
