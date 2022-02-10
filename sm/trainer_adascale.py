@@ -135,6 +135,8 @@ def main():
                         default=False,
                         action='store_true',
                         help="Enable mixed precision training")
+    parser.add_argument("--data_dir", type=str, help="Directory for reading data.", default=data_dir_default)
+
 
 
     argv = parser.parse_args()
@@ -153,6 +155,8 @@ def main():
     momentum = argv.momentum
     eval_freq = argv.eval_freq
     run_max_steps = argv.run_max_steps
+    data_dir = argv.data_dir
+
     # Create directories outside the PyTorch program
     # Do not create directory here because it is not multiprocess safe
     '''
@@ -179,8 +183,8 @@ def main():
         writer = SummaryWriter(tensorboard_path)
 
         print(" Adascale hyperparameters")
-        print(" Base batch size: ", batch_size)
-        print(" Scale factor batch size: ", batch_size*get_world_size()/base_batch_size)
+        print(" Base batch size: ", base_batch_size)
+        print(" Scale factor: ", batch_size*get_world_size()/base_batch_size)
         print(" Batch size after scaling: ", batch_size*get_world_size())
         print(" Number of steps : ")
 
@@ -210,8 +214,8 @@ def main():
 
     # Data should be prefetched
     # Download should be set to be False, because it is not multiprocess safe
-    train_set = torchvision.datasets.CIFAR10(root="/home/ec2-user/SageMaker/data/", train=True, download=False, transform=transform)
-    test_set = torchvision.datasets.CIFAR10(root="/home/ec2-user/SageMaker/data/", train=False, download=False, transform=transform)
+    train_set = torchvision.datasets.CIFAR10(root=data_dir, train=True, download=False, transform=transform)
+    test_set = torchvision.datasets.CIFAR10(root=data_dir, train=False, download=False, transform=transform)
 
     # Restricts data loading to a subset of the dataset exclusive to the current process
     train_sampler = DistributedSampler(dataset=train_set)
@@ -329,7 +333,6 @@ def main():
 
     print(" INFO: Total steps: ", step)
     print(" INFO: Total step_scale_dep: ", step_scale_dep)
-
 
 
 if __name__ == "__main__":
