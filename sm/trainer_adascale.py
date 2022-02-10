@@ -98,6 +98,8 @@ def main():
     weight_decaye_default = 1e-4
     momentum_default = 0.9
     base_batch_size = 128.0
+    data_dir_default = "/opt/ml/input/data/"
+
     # Each process runs on 1 GPU device specified by the local_rank argument.
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--arch', '-a', metavar='ARCH', default='resnet20',
