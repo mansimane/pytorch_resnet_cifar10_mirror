@@ -178,17 +178,17 @@ def main():
     # torch.distributed.init_process_group(backend="gloo")
     scale = batch_size*get_world_size()/base_batch_size
 
-    if get_rank() == 0:
-        # tensorboard summary writer (by default created for all workers)
-        tensorboard_path = f'{argv.log_dir}/worker-0-scale-{scale}-lr-{learning_rate}-bs-{batch_size}-scheduler--adascale-{use_adascale}-shuffle-run_max_steps-{run_max_steps}'
-        print("Log directory ", tensorboard_path )
-        writer = SummaryWriter(tensorboard_path)
+    rank =  get_rank()
+    # tensorboard summary writer (by default created for all workers)
+    tensorboard_path = f'{argv.log_dir}/worker-{rank}-scale-{scale}-lr-{learning_rate}-bs-{batch_size}-scheduler--adascale-{use_adascale}-shuffle-run_max_steps-{run_max_steps}'
+    #    print("Log directory ", tensorboard_path )
+    writer = SummaryWriter(tensorboard_path)
 
-        print(" Adascale hyperparameters")
-        print(" Base batch size: ", base_batch_size)
-        print(" Scale factor: ", batch_size*get_world_size()/base_batch_size)
-        print(" Batch size after scaling: ", batch_size*get_world_size())
-        print(" Number of steps : ")
+    print(" Adascale hyperparameters")
+    print(" Base batch size: ", base_batch_size)
+    print(" Scale factor: ", batch_size*get_world_size()/base_batch_size)
+    print(" Batch size after scaling: ", batch_size*get_world_size())
+    print(" Number of steps : ")
 
     # Encapsulate the model on the GPU assigned to the current process
     model = resnet.__dict__[argv.arch]()
@@ -242,8 +242,9 @@ def main():
                                        weight_decay=weight_decay),
                              model=model,
                              scaler=scaler, 
-                            summary_writer=None,
-                            autoscaler_cfg_path=argv.autoscaler_cfg)
+                            summary_writer=writer,
+                            autoscaler_cfg_path=argv.autoscaler_cfg,
+                            )
     else:
         print(" INFO: Not using Adascale")
         optimizer = optim.SGD(ddp_model.parameters(),
