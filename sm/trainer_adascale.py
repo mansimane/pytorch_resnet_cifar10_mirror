@@ -308,6 +308,7 @@ def main():
                     gain = optimizer.gain()
                     step_scale_dep += gain
                     writer.add_scalar(f'Gain', gain, step)
+                    writer.add_scalar(f'GNS', optimizer.gns(), step)
                     writer.add_scalar(f'Train/Loss_step_scale_dep', losses.avg, step_scale_dep)
 
                 writer.flush()

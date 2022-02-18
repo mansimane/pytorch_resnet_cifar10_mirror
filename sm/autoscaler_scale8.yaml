@@ -1,0 +1,26 @@
+autoscaler:
+  model_name: "resnet50"
+  training_label: "r50_elastic_sharded_1"
+  s3_bucket: "mzanur-autoscaler"
+  log_dir: "./logs"
+  enable_debug: Off
+  collect_tensorboard: On
+  world_size: 0
+  reset_optimizer_state_on_restart: On
+  cluster_state_update_interval: 500
+  update_interval: 1
+  precondition_gradients: Off
+  gradient_accumulation_supported: True
+  adjust_gradients_for_accumulation: False
+  smoothing: null
+adascale:
+  aggressive_schedule: Off
+  is_adaptive: False
+  use_pt_adam: False
+  max_grad_norm: .Inf
+  adjust_momentum: False
+gradient_noise_scale:
+  batch_size_upper_limit: .Inf
+  scale_one_batch_size: 128
+  scale_one_world_size: 1
+
